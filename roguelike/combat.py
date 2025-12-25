@@ -1,4 +1,8 @@
 from roguelike.config import COLOR_RED, COLOR_WHITE, COLOR_GREEN
+from roguelike.data.definitions import ITEMS
+from roguelike.entities import Entity, Item, Equipment
+from roguelike.environment import Door, Trap
+import random
 
 def get_attack_cost(attack_type):
     if attack_type == "quick": return 2
@@ -17,6 +21,18 @@ def perform_attack(attacker, target, game, attack_type="normal"):
 
     attacker.fighter.stamina -= cost
 
+    # --- NEW COMBAT MECHANICS ---
+
+    # 1. Dodge Check
+    dodge_chance = target.fighter.dodge_chance
+    if random.random() < dodge_chance:
+        game.add_message(f"{target.name} dodges the attack!", (200, 200, 255))
+        return
+
+    # 2. Crit Check
+    crit_chance = attacker.fighter.crit_chance
+    is_crit = random.random() < crit_chance
+
     # Calculate Damage
     base_damage = attacker.fighter.power
 
@@ -33,6 +49,10 @@ def perform_attack(attacker, target, game, attack_type="normal"):
     elif attack_type == "heavy":
         multiplier = 1.5
 
+    # Crit Multiplier
+    if is_crit:
+        multiplier *= 1.5
+
     # Target Defense Bonuses
     defense = target.fighter.defense
     if target.inventory:
@@ -43,8 +63,6 @@ def perform_attack(attacker, target, game, attack_type="normal"):
     damage = int((base_damage * multiplier) - defense)
 
     # Parry/Guard Check (Simplified)
-    # If target is guarding (we need to add a state to fighter or entity for this)
-    # For now, let's assume if they have a 'guarding' flag
     if getattr(target, 'guarding', False):
         damage = int(damage * 0.5)
         game.add_message(f"{target.name} guards against the blow!", (200, 200, 255))
@@ -52,18 +70,30 @@ def perform_attack(attacker, target, game, attack_type="normal"):
         target.fighter.stamina = max(0, target.fighter.stamina - 2) # Guard costs stamina on hit
 
     if damage > 0:
+        if is_crit:
+            game.add_message(f"CRITICAL HIT! {attacker.name} hits {target.name} for {damage} damage!", COLOR_RED)
+            # Knockback on crit
+            dx = target.x - attacker.x
+            dy = target.y - attacker.y
+            if dx != 0: dx //= abs(dx)
+            if dy != 0: dy //= abs(dy)
+
+            new_x = target.x + dx
+            new_y = target.y + dy
+            if not game.game_map.is_blocked(new_x, new_y) and not game.get_blocking_entities(new_x, new_y):
+                target.x = new_x
+                target.y = new_y
+                game.add_message(f"{target.name} is knocked back!", COLOR_WHITE)
+
+        else:
+            game.add_message(f"{attacker.name} hits {target.name} ({attack_type}) for {damage} damage!", COLOR_WHITE)
+
         target.fighter.take_damage(damage)
-        game.add_message(f"{attacker.name} hits {target.name} ({attack_type}) for {damage} damage!", COLOR_WHITE)
 
         if target.fighter.hp <= 0:
             kill_entity(attacker, target, game)
     else:
         game.add_message(f"{attacker.name} attacks {target.name} but does no damage.", COLOR_WHITE)
-
-from roguelike.data.definitions import ITEMS
-from roguelike.entities import Entity, Item, Equipment
-from roguelike.environment import Door, Trap
-import random
 
 def handle_player_move(dx, dy, game):
     dest_x = game.player.x + dx
@@ -129,11 +159,6 @@ def kill_entity(attacker, target, game):
     target.sprite_name = "remains" # Fallback handled in render
     target.render_order = 0
 
-# handle_player_move definition moved up to fix ordering/imports/overwrites
-# But wait, we have duplicate definitions now because I pasted it above `kill_entity`
-# and the original was below `kill_entity`.
-# I must delete the old one.
-
 def wait_turn(game):
     # Regen stamina
     if game.player.fighter.stamina < game.player.fighter.max_stamina:
@@ -141,6 +166,10 @@ def wait_turn(game):
 
     if game.player.fighter.hp < game.player.fighter.max_hp:
         game.player.fighter.heal(1)
+
+    # Regen Mana
+    if game.player.fighter.mana < game.player.fighter.max_mana:
+        game.player.fighter.mana += 1
 
     game.player.guarding = False # Reset guard
     return True
