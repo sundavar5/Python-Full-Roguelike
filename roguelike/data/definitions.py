@@ -175,3 +175,18 @@ for i in range(101):
         "title": f"Ancient Chronicle #{i}",
         "text": f"This is entry number {i} of the ancient history of this realm. Dark times fell upon the land..."
     })
+
+# Import Massive Data if available
+try:
+    from roguelike.data.massive_lore import MASSIVE_LORE
+    LORE.extend(MASSIVE_LORE)
+    print(f"Loaded {len(MASSIVE_LORE)} massive lore entries.")
+except ImportError:
+    pass
+
+try:
+    from roguelike.data.massive_items import MASSIVE_ITEMS
+    ITEMS.extend(MASSIVE_ITEMS)
+    print(f"Loaded {len(MASSIVE_ITEMS)} massive unique items.")
+except ImportError:
+    pass
