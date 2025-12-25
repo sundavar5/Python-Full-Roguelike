@@ -30,7 +30,6 @@ def main():
     ui = UI(screen)
 
     # Try load game or new game
-    # For now always new game for simplicity in testing
     game = Game()
     game.new_game()
 
@@ -46,6 +45,7 @@ def main():
                 save_game(game)
 
             if event.type == pygame.KEYDOWN:
+                # --- PLAYING STATE ---
                 if game.state == STATE_PLAYING:
                     if event.key == KEY_MOVE_UP:
                         player_turn = handle_player_move(0, -1, game)
@@ -63,16 +63,15 @@ def main():
                         game.state = STATE_ATTACK_DIRECTION
                         game.add_message("Choose attack direction (WASD).", COLOR_GREEN)
                     elif event.key == KEY_RANGED:
-                         # Quick ranged (if equipped bow) or just toggle targeting?
-                         # For now let's make it toggle targeting mode cursor
                          game.state = STATE_TARGETING
                          game.target_x, game.target_y = game.player.x, game.player.y
+                         game.pending_item = None
+                         game.pending_skill = None
                          game.add_message("Targeting Mode (WASD + Enter/T).", COLOR_GREEN)
                     elif event.key == KEY_PICKUP:
                         pickup_item(game)
-                        player_turn = True # Picking up takes a turn
+                        player_turn = True
                     elif event.key == KEY_ENTER:
-                        # Check for stairs
                         if game.player.x == game.game_map.stairs.x and game.player.y == game.game_map.stairs.y:
                             game.next_level()
                     elif event.key == KEY_INVENTORY:
@@ -81,10 +80,15 @@ def main():
                          game.state = STATE_CRAFTING
                     elif event.key == KEY_LORE:
                          game.state = STATE_LORE
+                    elif event.key == KEY_CHARACTER:
+                         game.state = STATE_CHARACTER_SCREEN
+                    elif event.key == KEY_SKILLS:
+                         game.state = STATE_SKILLS
                     elif event.key == KEY_ESCAPE:
                         running = False
                         save_game(game)
 
+                # --- ATTACK DIRECTION STATE ---
                 elif game.state == STATE_ATTACK_DIRECTION:
                     dx, dy = 0, 0
                     if event.key == KEY_MOVE_UP: dy = -1
@@ -105,6 +109,7 @@ def main():
                             player_turn = True
                         game.state = STATE_PLAYING
 
+                # --- TARGETING STATE ---
                 elif game.state == STATE_TARGETING:
                     if event.key == KEY_MOVE_UP: game.target_y -= 1
                     elif event.key == KEY_MOVE_DOWN: game.target_y += 1
@@ -113,12 +118,17 @@ def main():
                     elif event.key == KEY_ESCAPE:
                         game.state = STATE_PLAYING
                         game.pending_item = None
+                        game.pending_skill = None
                     elif event.key == KEY_ENTER or event.key == KEY_TARGET:
                          if game.pending_item:
-                             # Cast scroll
                              cast_scroll(game.pending_item, game.target_x, game.target_y, game)
                              game.pending_item = None
                              player_turn = True
+                             game.state = STATE_PLAYING
+                         elif getattr(game, 'pending_skill', None):
+                             if game.pending_skill.cast(game.player, game.target_x, game.target_y, game):
+                                 player_turn = True
+                             game.pending_skill = None
                              game.state = STATE_PLAYING
                          else:
                              # Inspect
@@ -128,20 +138,14 @@ def main():
                              else:
                                  tile = game.game_map.tiles[game.target_x][game.target_y]
                                  game.add_message(f"You see {tile.sprite}.", COLOR_WHITE)
-                             # Stay in targeting mode for inspection
 
-                elif game.state == STATE_LORE:
-                    if event.key == KEY_ESCAPE or event.key == KEY_LORE:
-                        game.state = STATE_PLAYING
-
+                # --- INVENTORY STATE ---
                 elif game.state == STATE_INVENTORY:
                     if event.key == KEY_ESCAPE or event.key == KEY_INVENTORY:
                         game.state = STATE_PLAYING
                     elif event.key == KEY_DISMANTLE:
                          game.add_message("Press key (1-9) of item to dismantle.", (255, 200, 0))
-                         # Simple hack: wait for next keypress in loop or change state?
-                         # Changing state is safer.
-                         game.state = 10 # STATE_DISMANTLE
+                         game.state = 10 # STATE_DISMANTLE_SELECT
                     elif event.key >= pygame.K_1 and event.key <= pygame.K_9:
                         idx = event.key - pygame.K_1
                         if idx < len(game.player.inventory.items):
@@ -150,7 +154,8 @@ def main():
                             player_turn = True
                             game.state = STATE_PLAYING
 
-                elif game.state == 10: # STATE_DISMANTLE
+                # --- DISMANTLE SELECT STATE ---
+                elif game.state == 10:
                     if event.key == KEY_ESCAPE or event.key == KEY_INVENTORY:
                         game.state = STATE_INVENTORY
                     elif event.key >= pygame.K_1 and event.key <= pygame.K_9:
@@ -161,6 +166,7 @@ def main():
                                 player_turn = True
                             game.state = STATE_INVENTORY
 
+                # --- CRAFTING STATE ---
                 elif game.state == STATE_CRAFTING:
                     if event.key == KEY_ESCAPE or event.key == KEY_CRAFTING:
                         game.state = STATE_PLAYING
@@ -171,8 +177,58 @@ def main():
                             if success:
                                 player_turn = True
 
+                # --- LORE STATE ---
+                elif game.state == STATE_LORE:
+                    if event.key == KEY_ESCAPE or event.key == KEY_LORE:
+                        game.state = STATE_PLAYING
+
+                # --- CHARACTER SCREEN STATE ---
+                elif game.state == STATE_CHARACTER_SCREEN:
+                    if event.key == KEY_ESCAPE or event.key == KEY_CHARACTER:
+                        game.state = STATE_PLAYING
+                    elif event.key == KEY_ENTER:
+                        if game.player.level.requires_level_up():
+                            game.player.level.level_up()
+                            game.add_message(f"Welcome to Level {game.player.level.current_level}!", (255, 255, 0))
+                    elif event.key >= pygame.K_1 and event.key <= pygame.K_4:
+                        if game.player.fighter.attributes.points > 0:
+                            idx = event.key - pygame.K_1
+                            attr = game.player.fighter.attributes
+                            if idx == 0: attr.strength += 1
+                            elif idx == 1: attr.dexterity += 1
+                            elif idx == 2: attr.constitution += 1
+                            elif idx == 3: attr.intelligence += 1
+                            attr.points -= 1
+                            game.player.fighter.recalculate_stats()
+
+                # --- SKILLS STATE ---
+                elif game.state == STATE_SKILLS:
+                    if event.key == KEY_ESCAPE or event.key == KEY_SKILLS:
+                        game.state = STATE_PLAYING
+                    elif event.key >= pygame.K_1 and event.key <= pygame.K_9:
+                        idx = event.key - pygame.K_1
+                        if idx < len(game.player.skill_book):
+                            skill = game.player.skill_book[idx]
+
+                            if skill.current_cooldown > 0:
+                                game.add_message("Skill is on cooldown.", COLOR_RED)
+                            elif game.player.fighter.mana < skill.mana_cost:
+                                game.add_message("Not enough mana.", COLOR_RED)
+                            else:
+                                # Pre-check passed
+                                game.pending_item = None
+                                game.pending_skill = skill
+                                game.state = STATE_TARGETING
+                                game.target_x, game.target_y = game.player.x, game.player.y
+                                game.add_message(f"Targeting {skill.name}...", COLOR_GREEN)
+
         # Update
         if player_turn and game.state == STATE_PLAYING:
+            game.update_effects()
+            # Tick skills
+            if game.player.skill_book:
+                for skill in game.player.skill_book:
+                    skill.tick()
             enemy_turn(game)
 
         if game.fov_recompute:
@@ -187,13 +243,16 @@ def main():
         if game.state == STATE_INVENTORY:
             ui.draw_inventory(game.player.inventory)
         elif game.state == 10: # STATE_DISMANTLE
-            ui.draw_inventory(game.player.inventory) # Reuse inventory draw
-            # Draw overlay hint
+            ui.draw_inventory(game.player.inventory)
             ui.draw_menu("Dismantle Which Item?", [])
         elif game.state == STATE_CRAFTING:
             ui.draw_crafting(RECIPES)
         elif game.state == STATE_LORE:
             ui.draw_lore(LORE)
+        elif game.state == STATE_CHARACTER_SCREEN:
+            ui.draw_character(game.player)
+        elif game.state == STATE_SKILLS:
+            ui.draw_skills(game.player.skill_book)
 
         pygame.display.flip()
         clock.tick(FPS)

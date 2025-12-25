@@ -62,7 +62,41 @@ def perform_attack(attacker, target, game, attack_type="normal"):
 
 from roguelike.data.definitions import ITEMS
 from roguelike.entities import Entity, Item, Equipment
+from roguelike.environment import Door, Trap
 import random
+
+def handle_player_move(dx, dy, game):
+    dest_x = game.player.x + dx
+    dest_y = game.player.y + dy
+
+    # Reset guard if moving
+    game.player.guarding = False
+
+    # Check for Door
+    target = game.get_blocking_entities(dest_x, dest_y)
+    if isinstance(target, Door):
+        if not target.is_open:
+            target.open()
+            game.add_message("You open the door.", COLOR_WHITE)
+            game.fov_recompute = True
+            return True
+
+    if not game.game_map.is_blocked(dest_x, dest_y):
+        if target:
+            # Bump attack (default quick/normal)
+            perform_attack(game.player, target, game, "normal")
+        else:
+            game.player.move(dx, dy)
+            game.fov_recompute = True
+
+            # Check Traps
+            for entity in game.entities:
+                if isinstance(entity, Trap) and entity.x == game.player.x and entity.y == game.player.y:
+                    entity.trigger(game.player, game)
+
+        return True # Turn taken
+
+    return False # Turn not taken (blocked by wall)
 
 def kill_entity(attacker, target, game):
     game.add_message(f"{target.name} is dead!", COLOR_RED)
@@ -95,24 +129,10 @@ def kill_entity(attacker, target, game):
     target.sprite_name = "remains" # Fallback handled in render
     target.render_order = 0
 
-def handle_player_move(dx, dy, game):
-    dest_x = game.player.x + dx
-    dest_y = game.player.y + dy
-
-    # Reset guard if moving
-    game.player.guarding = False
-
-    if not game.game_map.is_blocked(dest_x, dest_y):
-        target = game.get_blocking_entities(dest_x, dest_y)
-        if target:
-            # Bump attack (default quick/normal)
-            perform_attack(game.player, target, game, "normal")
-        else:
-            game.player.move(dx, dy)
-            game.fov_recompute = True
-        return True # Turn taken
-
-    return False # Turn not taken (blocked by wall)
+# handle_player_move definition moved up to fix ordering/imports/overwrites
+# But wait, we have duplicate definitions now because I pasted it above `kill_entity`
+# and the original was below `kill_entity`.
+# I must delete the old one.
 
 def wait_turn(game):
     # Regen stamina

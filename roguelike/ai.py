@@ -1,6 +1,13 @@
 from roguelike.combat import perform_attack
+from roguelike.ai_states import AdvancedMonster
+from roguelike.status import Stun
 
 def basic_monster_turn(monster, target, game):
+    # Check for Stun
+    for effect in monster.status_effects:
+        if isinstance(effect, Stun):
+            return
+
     if monster.distance_to(target) >= 2:
         # Move towards player
         dx = target.x - monster.x
@@ -19,4 +26,7 @@ def basic_monster_turn(monster, target, game):
 def enemy_turn(game):
     for entity in game.entities:
         if entity.ai:
-            basic_monster_turn(entity, game.player, game)
+            if isinstance(entity.ai, AdvancedMonster):
+                entity.ai.take_turn(entity, game)
+            else:
+                basic_monster_turn(entity, game.player, game)

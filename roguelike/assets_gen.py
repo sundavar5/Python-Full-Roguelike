@@ -108,6 +108,26 @@ def main():
     gen_tile("water", COLORS["water"])
     gen_tile("lava", COLORS["lava"])
 
+    # Doors
+    s = create_surface()
+    s.fill(COLORS["floor"])
+    pygame.draw.rect(s, COLORS["wood"], (4, 4, 24, 24))
+    pygame.draw.circle(s, (255, 215, 0), (22, 16), 2) # Knob
+    save_surface(s, "door_closed")
+
+    s = create_surface()
+    s.fill(COLORS["floor"])
+    pygame.draw.rect(s, COLORS["wood"], (4, 4, 8, 24)) # Open door look
+    save_surface(s, "door_open")
+
+    # Traps
+    s = create_surface()
+    s.fill(COLORS["floor"])
+    pygame.draw.rect(s, (100, 100, 100), (8, 8, 16, 16), 1)
+    pygame.draw.line(s, (100, 100, 100), (16, 8), (16, 24), 1)
+    pygame.draw.line(s, (100, 100, 100), (8, 16), (24, 16), 1)
+    save_surface(s, "trap_triggered")
+
     # Stairs
     s = create_surface()
     s.fill(COLORS["floor"])

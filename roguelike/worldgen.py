@@ -1,5 +1,7 @@
 import random
 from roguelike.entities import Entity, Fighter, AI, BasicMonster, Item, Inventory, Equipment
+from roguelike.environment import Door, Trap
+from roguelike.ai_states import AdvancedMonster
 from roguelike.config import MAP_WIDTH, MAP_HEIGHT, TILE_SIZE
 from roguelike.data.definitions import ENEMIES, ITEMS
 
@@ -57,6 +59,18 @@ class GameMap:
             self.tiles[x][y].block_sight = False
             self.tiles[x][y].sprite = "floor"
 
+    def place_doors(self, room, entities):
+        # Very simple door placement: Check center of walls?
+        # Actually easier to place where tunnels connect.
+        # But we don't track tunnel connections easily here without refactor.
+        # We will try to place 1 random trap per room for now.
+
+        if random.random() < 0.3:
+            tx = random.randint(room.x1 + 1, room.x2 - 1)
+            ty = random.randint(room.y1 + 1, room.y2 - 1)
+            if not any([e for e in entities if e.x == tx and e.y == ty]):
+                entities.append(Trap(tx, ty))
+
     def create_v_tunnel(self, y1, y2, x):
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.tiles[x][y].blocked = False
@@ -77,7 +91,11 @@ class GameMap:
                 monster_def = random.choice(ENEMIES)
                 monster = Entity(x, y, monster_def["name"], monster_def["color"], blocks=True, render_order=2)
                 fighter = Fighter(hp=monster_def["hp"], defense=monster_def["defense"], power=monster_def["power"])
-                ai = BasicMonster()
+                # Use Advanced AI for some
+                if random.random() < 0.5:
+                    ai = AdvancedMonster()
+                else:
+                    ai = BasicMonster()
                 monster.fighter = fighter
                 monster.ai = ai
                 entities.append(monster)
@@ -137,6 +155,7 @@ class GameMap:
                         self.create_h_tunnel(prev_x, new_x, new_y)
 
                 self.place_entities(new_room, entities)
+                self.place_doors(new_room, entities) # Adds traps for now, doors tricky without tunnel logic
                 rooms.append(new_room)
                 num_rooms += 1
 
