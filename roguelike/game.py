@@ -24,7 +24,7 @@ class Game:
         self.entities = []
         # Create Player
         self.player = Entity(0, 0, "Player", "player", blocks=True, render_order=3)
-        self.player.fighter = Fighter(hp=BASE_STATS["hp"] * 3, defense=1, power=4)
+        self.player.fighter = Fighter(hp=BASE_STATS["hp"] * 3, defense=1, power=4, dexterity=15, intelligence=12, strength=14, constitution=14)
         self.player.inventory = Inventory(capacity=26)
         self.entities.append(self.player)
 

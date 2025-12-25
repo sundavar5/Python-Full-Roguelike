@@ -1,6 +1,7 @@
 import random
 from roguelike.entities import Entity, Fighter, AI, BasicMonster, Item, Inventory, Equipment
 from roguelike.environment import Door, Trap
+from roguelike.ai import RangedMonster
 from roguelike.ai_states import AdvancedMonster
 from roguelike.config import MAP_WIDTH, MAP_HEIGHT, TILE_SIZE
 from roguelike.data.definitions import ENEMIES, ITEMS
@@ -92,7 +93,9 @@ class GameMap:
                 monster = Entity(x, y, monster_def["name"], monster_def["color"], blocks=True, render_order=2)
                 fighter = Fighter(hp=monster_def["hp"], defense=monster_def["defense"], power=monster_def["power"])
                 # Use Advanced AI for some
-                if random.random() < 0.5:
+                if monster_def.get("ai") == "ranged":
+                    ai = RangedMonster()
+                elif random.random() < 0.5:
                     ai = AdvancedMonster()
                 else:
                     ai = BasicMonster()

@@ -15,6 +15,7 @@ class Entity:
         self.inventory = None
         self.item = None
         self.equipment = None
+        self.status_effects = []
 
     def move(self, dx, dy):
         self.x += dx
@@ -24,14 +25,40 @@ class Entity:
         return math.sqrt((other.x - self.x)**2 + (other.y - self.y)**2)
 
 class Fighter:
-    def __init__(self, hp, defense, power):
-        self.max_hp = hp
-        self.hp = hp
+    def __init__(self, hp, defense, power, dexterity=10, intelligence=10, strength=10, constitution=10):
+        # Apply Constitution Bonus to HP
+        hp_bonus = (constitution - 10) * 2
+        self.max_hp = hp + hp_bonus
+        self.hp = self.max_hp
+
         self.defense = defense
-        self.power = power
+
+        # Apply Strength Bonus to Power
+        power_bonus = max(0, (strength - 10) // 2)
+        self.power = power + power_bonus
+
         self.stamina = 10
         self.max_stamina = 10
         self.xp = 10 # Default XP
+
+        # New Stats
+        self.dexterity = dexterity
+        self.intelligence = intelligence
+        self.strength = strength
+        self.constitution = constitution
+
+        self.max_mana = intelligence * 2
+        self.mana = self.max_mana
+
+    @property
+    def crit_chance(self):
+        # 5% base + 1% per point of dexterity above 10
+        return 0.05 + max(0, (self.dexterity - 10) * 0.01)
+
+    @property
+    def dodge_chance(self):
+        # 0% base + 2% per point of dexterity above 10, max 50%
+        return min(0.50, max(0, (self.dexterity - 10) * 0.02))
 
     def take_damage(self, amount):
         self.hp -= amount

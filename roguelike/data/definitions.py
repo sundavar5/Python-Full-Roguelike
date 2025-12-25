@@ -21,12 +21,12 @@ ENEMY_ARCHETYPES = {
     "orc": {"char": "o", "color": "orc", "name": "Orc", "hp": 20, "defense": 1, "power": 4, "xp": 35, "ai": "hostile"},
     "goblin": {"char": "g", "color": "goblin", "name": "Goblin", "hp": 10, "defense": 0, "power": 3, "xp": 20, "ai": "hostile"},
     "troll": {"char": "T", "color": "orc", "name": "Troll", "hp": 30, "defense": 2, "power": 8, "xp": 100, "ai": "hostile"},
-    "skeleton": {"char": "s", "color": "skeleton", "name": "Skeleton", "hp": 12, "defense": 1, "power": 4, "xp": 25, "ai": "hostile"},
+    "skeleton": {"char": "s", "color": "skeleton", "name": "Skeleton Archer", "hp": 12, "defense": 1, "power": 4, "xp": 25, "ai": "ranged"},
     "zombie": {"char": "z", "color": "skeleton", "name": "Zombie", "hp": 15, "defense": 0, "power": 3, "xp": 25, "ai": "hostile"},
     "rat": {"char": "r", "color": "grey", "name": "Giant Rat", "hp": 5, "defense": 0, "power": 2, "xp": 10, "ai": "hostile"},
     "bat": {"char": "b", "color": "grey", "name": "Giant Bat", "hp": 5, "defense": 0, "power": 2, "xp": 10, "ai": "hostile"},
     "slime": {"char": "S", "color": "green", "name": "Slime", "hp": 25, "defense": 0, "power": 3, "xp": 30, "ai": "hostile"},
-    "bandit": {"char": "B", "color": "dark_grey", "name": "Bandit", "hp": 20, "defense": 1, "power": 5, "xp": 40, "ai": "hostile"},
+    "bandit": {"char": "B", "color": "dark_grey", "name": "Bandit", "hp": 20, "defense": 1, "power": 5, "xp": 40, "ai": "ranged"},
     "boss": {"char": "O", "color": "boss", "name": "Warlord", "hp": 100, "defense": 4, "power": 10, "xp": 500, "ai": "hostile"},
 }
 
