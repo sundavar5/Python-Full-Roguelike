@@ -60,3 +60,15 @@ class Game:
         self.game_map.make_map(30, 6, 10, self.map_width, self.map_height, self.player, self.entities)
 
         self.fov_recompute = True
+
+    def update_effects(self):
+        for entity in self.entities:
+            if hasattr(entity, 'status_effects'):
+                to_remove = []
+                for effect in entity.status_effects:
+                    if effect.tick(entity, self):
+                        to_remove.append(effect)
+
+                for effect in to_remove:
+                    effect.remove(entity, self)
+                    entity.status_effects.remove(effect)
